@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Web-Based Statistical & Probability Calculator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body class="bg-gradient-to-r from-indigo-100 to-white min-h-screen">
+    <div class="container mx-auto p-6">
+        <h1 class="text-4xl font-bold text-indigo-700 text-center mb-6">Statistical & Probability Calculator</h1>
+        <p class="text-center text-gray-600 mb-8">A tool for computer science students to compute statistics and visualize data</p>
+
+        <div class="bg-white p-6 rounded-lg shadow-lg max-w-3xl mx-auto">
+            <!-- Input Section -->
+            <div class="mb-6">
+                <label class="block text-lg font-semibold text-gray-700 mb-2">Enter data (comma-separated, e.g., 1, 2, 3, 4, 5)</label>
+                <input type="text" id="dataInput" class="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="1, 2, 3, 4, 5">
+            </div>
+            <button onclick="calculateStatistics()" class="w-full bg-indigo-600 text-white p-3 rounded-lg hover:bg-indigo-700 transition duration-300">Calculate & Visualize</button>
+
+            <!-- Error Message -->
+            <div id="error" class="text-red-500 text-center mt-4 hidden"></div>
+
+            <!-- Results Section -->
+            <div id="results" class="mt-6 hidden">
+                <h2 class="text-2xl font-semibold text-indigo-700 mb-4">Calculation Results</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="bg-gray-50 p-4 rounded-lg">
+                        <h3 class="text-lg font-medium text-gray-800 mb-2">Basic Statistics</h3>
+                        <p><strong>Mean:</strong> <span id="mean"></span></p>
+                        <p><strong>Median:</strong> <span id="median"></span></p>
+                        <p><strong>Mode:</strong> <span id="mode"></span></p>
+                        <p><strong>Variance:</strong> <span id="variance"></span></p>
+                        <p><strong>Standard Deviation:</strong> <span id="stdDev"></span></p>
+                        <p><strong>Range:</strong> <span id="range"></span></p>
+                        <p><strong>IQR:</strong> <span id="iqr"></span></p>
+                        <p class="mt-2 text-sm text-gray-600">Note: Calculations are based on sample data.</p>
+                    </div>
+                    <div>
+                        <canvas id="histogram" class="w-full h-64"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Educational Explanation -->
+            <div id="explanation" class="mt-6 text-sm text-gray-700 hidden">
+                <h3 class="text-lg font-medium text-indigo-700 mb-2">How It Works</h3>
+                <p><strong>Mean:</strong> Sum of all values divided by the number of values.</p>
+                <p><strong>Median:</strong> Middle value when data is sorted.</p>
+                <p><strong>Mode:</strong> Most frequent value(s).</p>
+                <p><strong>Variance:</strong> Average of squared differences from the mean.</p>
+                <p><strong>Standard Deviation:</strong> Square root of variance.</p>
+                <p><strong>Range:</strong> Difference between max and min values.</p>
+                <p><strong>IQR:</strong> Difference between third and first quartiles.</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function calculateStatistics() {
+            const input = document.getElementById('dataInput').value;
+            const numbers = input.split(',').map(num => parseFloat(num.trim())).filter(num => !isNaN(num));
+            const resultsDiv = document.getElementById('results');
+            const errorDiv = document.getElementById('error');
+            const explanationDiv = document.getElementById('explanation');
+
+            if (numbers.length === 0) {
+                errorDiv.textContent = 'Please enter valid numbers separated by commas!';
+                errorDiv.classList.remove('hidden');
+                resultsDiv.classList.add('hidden');
+                explanationDiv.classList.add('hidden');
+                return;
+            }
+
+            errorDiv.classList.add('hidden');
+            resultsDiv.classList.remove('hidden');
+            explanationDiv.classList.remove('hidden');
+
+            // Sort data for median and IQR
+            numbers.sort((a, b) => a - b);
+
+            // Mean
+            const mean = numbers.reduce((sum, num) => sum + num, 0) / numbers.length;
+            document.getElementById('mean').textContent = mean.toFixed(2);
+
+            // Median
+            const mid = Math.floor(numbers.length / 2);
+            const median = numbers.length % 2 === 0 ? (numbers[mid - 1] + numbers[mid]) / 2 : numbers[mid];
+            document.getElementById('median').textContent = median.toFixed(2);
+
+            // Mode
+            const frequency = {};
+            let maxFreq = 0;
+            numbers.forEach(num => {
+                frequency[num] = (frequency[num] || 0) + 1;
+                maxFreq = Math.max(maxFreq, frequency[num]);
+            });
+            const mode = Object.keys(frequency).filter(num => frequency[num] === maxFreq).map(Number);
+            document.getElementById('mode').textContent = mode.length > 1 || maxFreq === 1 ? 'No mode' : mode[0].toFixed(2);
+
+            // Variance and Standard Deviation
+            const meanDiff = numbers.map(num => (num - mean) ** 2);
+            const variance = meanDiff.reduce((sum, diff) => sum + diff, 0) / (numbers.length - 1);
+            const stdDev = Math.sqrt(variance);
+            document.getElementById('variance').textContent = variance.toFixed(2);
+            document.getElementById('stdDev').textContent = stdDev.toFixed(2);
+
+            // Range
+            const range = numbers[numbers.length - 1] - numbers[0];
+            document.getElementById('range').textContent = range.toFixed(2);
+
+            // IQR
+            const q1Index = Math.floor(numbers.length / 4);
+            const q3Index = Math.floor(3 * numbers.length / 4);
+            const q1 = numbers[q1Index];
+            const q3 = numbers[q3Index];
+            const iqr = q3 - q1;
+            document.getElementById('iqr').textContent = iqr.toFixed(2);
+
+            // Histogram
+            const ctx = document.getElementById('histogram').getContext('2d');
+            if (window.myChart) window.myChart.destroy();
+            window.myChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: numbers,
+                    datasets: [{
+                        label: 'Data Distribution',
+                        data: numbers.map(() => 1), // Frekuensi 1 untuk setiap nilai
+                        backgroundColor: 'rgba(99, 102, 241, 0.7)', // Indigo cerah
+                        borderColor: 'rgba(99, 102, 241, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    scales: {
+                        y: { beginAtZero: true, title: { display: true, text: 'Frequency' } },
+                        x: { title: { display: true, text: 'Values' } }
+                    },
+                    plugins: {
+                        title: { display: true, text: 'Histogram of Input Data', font: { size: 16 } },
+                        legend: { display: false }
+                    }
+                }
+            });
+        }
+    </script>
